@@ -1,180 +1,145 @@
-// Big_HW_2D.cpp : Defines the entry point for the application.
-//
+#include <windows.h>
+#include "stdafx.h"
+#include <d2d1.h>
+#include <d2d1helper.h>
+#pragma comment(lib, "d2d1")
 
-#include "framework.h"
-#include "Big_HW_2D.h"
+ID2D1Factory* pD2DFactory = NULL;
+ID2D1HwndRenderTarget* pRT = NULL;
+ID2D1SolidColorBrush* pBlackBrush = NULL;
 
-#define MAX_LOADSTRING 100
+#define HIBA_00 TEXT("Error:Program initialisation process.")
+HINSTANCE hInstGlob;
+int SajatiCmdShow;
+char szClassName[] = "WindowsApp";
+HWND Form1; //Ablak kezeloje
 
-// Global Variables:
-HINSTANCE hInst;                                // current instance
-WCHAR szTitle[MAX_LOADSTRING];                  // The title bar text
-WCHAR szWindowClass[MAX_LOADSTRING];            // the main window class name
+LRESULT CALLBACK WndProc0(HWND, UINT, WPARAM, LPARAM);
+void D2D_rajzolas(ID2D1HwndRenderTarget* pRT);
 
-// Forward declarations of functions included in this code module:
-ATOM                MyRegisterClass(HINSTANCE hInstance);
-BOOL                InitInstance(HINSTANCE, int);
-LRESULT CALLBACK    WndProc(HWND, UINT, WPARAM, LPARAM);
-INT_PTR CALLBACK    About(HWND, UINT, WPARAM, LPARAM);
-
-int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
-                     _In_opt_ HINSTANCE hPrevInstance,
-                     _In_ LPWSTR    lpCmdLine,
-                     _In_ int       nCmdShow)
+//*********************************
+//A windows program belépési pontja
+//*********************************
+int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR szCmdLine, int iCmdShow)
 {
-    UNREFERENCED_PARAMETER(hPrevInstance);
-    UNREFERENCED_PARAMETER(lpCmdLine);
+	static TCHAR szAppName[] = TEXT("StdWinClassName");
+	HWND hwnd;
+	MSG msg;
+	WNDCLASS wndclass0;
+	SajatiCmdShow = iCmdShow;
+	hInstGlob = hInstance;
 
-    // TODO: Place code here.
+	//*********************************
+	//Ablak osztálypéldány elokészítése
+	//*********************************
+	wndclass0.style = CS_HREDRAW | CS_VREDRAW;
+	wndclass0.lpfnWndProc = WndProc0;
+	wndclass0.cbClsExtra = 0;
+	wndclass0.cbWndExtra = 0;
+	wndclass0.hInstance = hInstance;
+	wndclass0.hIcon = LoadIcon(NULL, IDI_APPLICATION);
+	wndclass0.hCursor = LoadCursor(NULL, IDC_ARROW);
+	wndclass0.hbrBackground = (HBRUSH)GetStockObject(LTGRAY_BRUSH);
+	wndclass0.lpszMenuName = NULL;
+	wndclass0.lpszClassName = TEXT("WIN0");
 
-    // Initialize global strings
-    LoadStringW(hInstance, IDS_APP_TITLE, szTitle, MAX_LOADSTRING);
-    LoadStringW(hInstance, IDC_BIGHW2D, szWindowClass, MAX_LOADSTRING);
-    MyRegisterClass(hInstance);
+	//*********************************
+	//Ablak osztálypéldány regisztrációja
+	//*********************************
+	if (!RegisterClass(&wndclass0))
+	{
+		MessageBox(NULL, HIBA_00, TEXT("Program Start"), MB_ICONERROR);
+		return 0;
+	}
 
-    // Perform application initialization:
-    if (!InitInstance (hInstance, nCmdShow))
-    {
-        return FALSE;
-    }
+	//*********************************
+	//Ablak létrehozása
+	//*********************************
+	Form1 = CreateWindow(TEXT("WIN0"),
+		TEXT("Form1"),
+		(WS_OVERLAPPED | WS_SYSMENU | WS_THICKFRAME | WS_MAXIMIZEBOX | WS_MINIMIZEBOX),
+		50,
+		50,
+		400,
+		300,
+		NULL,
+		NULL,
+		hInstance,
+		NULL);
 
-    HACCEL hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_BIGHW2D));
+	//*********************************
+	//Ablak megjelenítése
+	//*********************************
+	ShowWindow(Form1, SajatiCmdShow);
+	UpdateWindow(Form1);
 
-    MSG msg;
-
-    // Main message loop:
-    while (GetMessage(&msg, nullptr, 0, 0))
-    {
-        if (!TranslateAccelerator(msg.hwnd, hAccelTable, &msg))
-        {
-            TranslateMessage(&msg);
-            DispatchMessage(&msg);
-        }
-    }
-
-    return (int) msg.wParam;
+	//*********************************
+	//Ablak üzenetkezelésének aktiválása
+	//*********************************
+	while (GetMessage(&msg, NULL, 0, 0))
+	{
+		TranslateMessage(&msg);
+		DispatchMessage(&msg);
+	}
+	return msg.wParam;
 }
 
-
-
-//
-//  FUNCTION: MyRegisterClass()
-//
-//  PURPOSE: Registers the window class.
-//
-ATOM MyRegisterClass(HINSTANCE hInstance)
+//*********************************
+//Az ablak callback függvénye: eseménykezelés
+//*********************************
+LRESULT CALLBACK WndProc0(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
-    WNDCLASSEXW wcex;
+	HDC hdc;
+	PAINTSTRUCT ps;
 
-    wcex.cbSize = sizeof(WNDCLASSEX);
+	switch (message)
+	{
+		//*********************************
+		//Ablak létrehozásakor közvetlenül
+		//*********************************
+	case WM_CREATE:
+		/*Init*/;
+		D2D1CreateFactory(D2D1_FACTORY_TYPE_SINGLE_THREADED, &pD2DFactory);
+		pD2DFactory->CreateHwndRenderTarget(
+			D2D1::RenderTargetProperties(),
+			D2D1::HwndRenderTargetProperties(
+				hwnd, D2D1::SizeU(800, 600)),
+			&pRT);
 
-    wcex.style          = CS_HREDRAW | CS_VREDRAW;
-    wcex.lpfnWndProc    = WndProc;
-    wcex.cbClsExtra     = 0;
-    wcex.cbWndExtra     = 0;
-    wcex.hInstance      = hInstance;
-    wcex.hIcon          = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_BIGHW2D));
-    wcex.hCursor        = LoadCursor(nullptr, IDC_ARROW);
-    wcex.hbrBackground  = (HBRUSH)(COLOR_WINDOW+1);
-    wcex.lpszMenuName   = MAKEINTRESOURCEW(IDC_BIGHW2D);
-    wcex.lpszClassName  = szWindowClass;
-    wcex.hIconSm        = LoadIcon(wcex.hInstance, MAKEINTRESOURCE(IDI_SMALL));
-
-    return RegisterClassExW(&wcex);
+		pRT->CreateSolidColorBrush(
+			D2D1::ColorF(D2D1::ColorF::Blue),
+			&pBlackBrush);
+		return 0;
+		//*********************************
+		//Ablak kliens területének újrarajzolása
+		//*********************************
+	case WM_PAINT:
+		hdc = BeginPaint(hwnd, &ps);
+		EndPaint(hwnd, &ps);
+		D2D_rajzolas(pRT);
+		return 0;
+		//*********************************
+		//Ablak bezárása, erõforrások felszabadítása
+		//*********************************
+	case WM_CLOSE:
+		pRT->Release();
+		pBlackBrush->Release();
+		pD2DFactory->Release();
+		DestroyWindow(hwnd);
+		return 0;
+		//*********************************
+		//Ablak megsemmisítése
+		//*********************************
+	case WM_DESTROY:
+		PostQuitMessage(0);
+		return 0;
+	}
+	return DefWindowProc(hwnd, message, wParam, lParam);
 }
 
-//
-//   FUNCTION: InitInstance(HINSTANCE, int)
-//
-//   PURPOSE: Saves instance handle and creates main window
-//
-//   COMMENTS:
-//
-//        In this function, we save the instance handle in a global variable and
-//        create and display the main program window.
-//
-BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
+void D2D_rajzolas(ID2D1HwndRenderTarget* pRT)
 {
-   hInst = hInstance; // Store instance handle in our global variable
-
-   HWND hWnd = CreateWindowW(szWindowClass, szTitle, WS_OVERLAPPEDWINDOW,
-      CW_USEDEFAULT, 0, CW_USEDEFAULT, 0, nullptr, nullptr, hInstance, nullptr);
-
-   if (!hWnd)
-   {
-      return FALSE;
-   }
-
-   ShowWindow(hWnd, nCmdShow);
-   UpdateWindow(hWnd);
-
-   return TRUE;
-}
-
-//
-//  FUNCTION: WndProc(HWND, UINT, WPARAM, LPARAM)
-//
-//  PURPOSE: Processes messages for the main window.
-//
-//  WM_COMMAND  - process the application menu
-//  WM_PAINT    - Paint the main window
-//  WM_DESTROY  - post a quit message and return
-//
-//
-LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
-{
-    switch (message)
-    {
-    case WM_COMMAND:
-        {
-            int wmId = LOWORD(wParam);
-            // Parse the menu selections:
-            switch (wmId)
-            {
-            case IDM_ABOUT:
-                DialogBox(hInst, MAKEINTRESOURCE(IDD_ABOUTBOX), hWnd, About);
-                break;
-            case IDM_EXIT:
-                DestroyWindow(hWnd);
-                break;
-            default:
-                return DefWindowProc(hWnd, message, wParam, lParam);
-            }
-        }
-        break;
-    case WM_PAINT:
-        {
-            PAINTSTRUCT ps;
-            HDC hdc = BeginPaint(hWnd, &ps);
-            // TODO: Add any drawing code that uses hdc here...
-            EndPaint(hWnd, &ps);
-        }
-        break;
-    case WM_DESTROY:
-        PostQuitMessage(0);
-        break;
-    default:
-        return DefWindowProc(hWnd, message, wParam, lParam);
-    }
-    return 0;
-}
-
-// Message handler for about box.
-INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
-{
-    UNREFERENCED_PARAMETER(lParam);
-    switch (message)
-    {
-    case WM_INITDIALOG:
-        return (INT_PTR)TRUE;
-
-    case WM_COMMAND:
-        if (LOWORD(wParam) == IDOK || LOWORD(wParam) == IDCANCEL)
-        {
-            EndDialog(hDlg, LOWORD(wParam));
-            return (INT_PTR)TRUE;
-        }
-        break;
-    }
-    return (INT_PTR)FALSE;
+	pRT->BeginDraw();
+	pRT->Clear(D2D1::ColorF(D2D1::ColorF::Black));
+	pRT->EndDraw();
 }
